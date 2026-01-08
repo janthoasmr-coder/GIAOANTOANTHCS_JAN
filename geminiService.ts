@@ -54,10 +54,7 @@ const SCHEMA = {
                 type: Type.OBJECT,
                 required: ["ma", "mo_ta", "dia_chi_tich_hop"],
                 properties: {
-                  ma: { 
-                    type: Type.STRING,
-                    description: "Mã Năng lực số (NLS). BẮT BUỘC TUÂN THỦ: Nếu khối lớp 6 hoặc 7, mã PHẢI chứa chuỗi 'TC1' (ví dụ: 1.1.TC1a, 3.2.TC1b). Nếu khối lớp 8 hoặc 9, mã PHẢI chứa chuỗi 'TC2' (ví dụ: 4.1.TC2a, 5.3.TC2c). TUYỆT ĐỐI không dùng các ký hiệu khác."
-                  },
+                  ma: { type: Type.STRING },
                   mo_ta: { type: Type.STRING },
                   dia_chi_tich_hop: {
                     type: Type.ARRAY,
@@ -97,7 +94,7 @@ const SCHEMA = {
                 type: Type.ARRAY,
                 items: {
                   type: Type.OBJECT,
-                  required: ["ten_hoat_dong", "muc_tieu", "noi_dung", "san_pham", "to_chuc_thuc_hien_2_cot", "danh_gia_thuong_xuyen", "tich_hop_nls", "phuong_an_khong_thiet_bi"],
+                  required: ["ten_hoat_dong", "muc_tieu", "noi_dung", "san_pham", "to_chuc_thuc_hien_2_cot"],
                   properties: {
                     ten_hoat_dong: { type: Type.STRING },
                     muc_tieu: { type: Type.ARRAY, items: { type: Type.STRING } },
@@ -128,10 +125,7 @@ const SCHEMA = {
                           }
                         }
                       }
-                    },
-                    danh_gia_thuong_xuyen: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    tich_hop_nls: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    phuong_an_khong_thiet_bi: { type: Type.STRING }
+                    }
                   }
                 }
               }
@@ -145,57 +139,56 @@ const SCHEMA = {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
-        required: ["hoat_dong", "ma_nls", "bieu_hien", "cong_cu_so", "minh_chung"],
+        required: ["hoat_dong", "ma_nls", "bieu_hien", "minh_chung"],
         properties: {
           hoat_dong: { type: Type.STRING },
           ma_nls: { type: Type.ARRAY, items: { type: Type.STRING } },
           bieu_hien: { type: Type.ARRAY, items: { type: Type.STRING } },
-          cong_cu_so: { type: Type.ARRAY, items: { type: Type.STRING } },
+          cong_cu_so: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
           minh_chung: { type: Type.ARRAY, items: { type: Type.STRING } }
         }
       }
     },
     quality_checklist: {
       type: Type.OBJECT,
-      required: ["dung_bo_cuc_mau", "co_danh_gia_thuong_xuyen", "co_dia_chi_nls", "khong_qua_tai", "ghi_chu_loi_neu_co"],
       properties: {
         dung_bo_cuc_mau: { type: Type.BOOLEAN },
         co_danh_gia_thuong_xuyen: { type: Type.BOOLEAN },
-        co_dia_chi_nls: { type: Type.BOOLEAN },
-        khong_qua_tai: { type: Type.BOOLEAN },
-        ghi_chu_loi_neu_co: { type: Type.ARRAY, items: { type: Type.STRING } }
+        co_dia_chi_nls: { type: Type.BOOLEAN }
       }
     },
     giao_an_markdown: { type: Type.STRING }
   }
 };
 
-const SYSTEM_INSTRUCTION = `Bạn là chuyên gia soạn thảo giáo án Toán THCS cấp cao. Nhiệm vụ của bạn là tạo kế hoạch bài dạy chi tiết bám sát Công văn 5512/BGDĐT và tích hợp Năng lực số (NLS) theo Công văn 3456/BGDĐT-GDPT.
+const SYSTEM_INSTRUCTION = `Bạn là Chatbot chuyên gia soạn "Kế hoạch bài dạy (giáo án)" môn Toán THCS theo Công văn 5512/BGDĐT và tích hợp Năng lực số (CV 3456).
 
-QUY TẮC MÃ NĂNG LỰC SỐ (NLS) - CỰC KỲ QUAN TRỌNG:
-1. Đối với Khối lớp 6 và 7: Bạn PHẢI sử dụng mã có chứa chuỗi "TC1". Ví dụ: 1.1.TC1a, 2.3.TC1b, 5.2.TC1c.
-2. Đối với Khối lớp 8 và 9: Bạn PHẢI sử dụng mã có chứa chuỗi "TC2". Ví dụ: 3.1.TC2a, 4.2.TC2b, 5.4.TC2d.
-TUYỆT ĐỐI không được nhầm lẫn giữa TC1 và TC2. Nếu giáo án thuộc lớp 8,9 mà dùng TC1 là SAI hoàn toàn.
+QUY TẮC TOÁN HỌC (CỰC KỲ QUAN TRỌNG):
+- Sử dụng LaTeX chuẩn cho TẤT CẢ công thức.
+- Biểu thức trong dòng (inline) bọc bởi dấu $: ví dụ $x = \frac{-b}{2a}$.
+- Biểu thức khối (block) bọc bởi dấu $$: ví dụ $$\\Delta = b^2 - 4ac$$.
+- TUYỆT ĐỐI không dùng ký tự Unicode cho toán học (ví dụ: dùng $x^2$ thay vì x²; dùng $\sqrt{a}$ thay vì √a).
 
-CẤU TRÚC BẮT BUỘC:
-1. Thông tin chung đầy đủ.
-2. Mục tiêu (Kiến thức, Năng lực, Phẩm chất). Mục Năng lực số phải ghi rõ mã và biểu hiện.
-3. Tiến trình dạy học: Mỗi hoạt động phải có 4 bước (Chuyển giao - Thực hiện - Báo cáo - Kết luận).
-4. Cột Sản phẩm dự kiến phải trình bày lời giải toán học chi tiết bằng LaTeX.`;
+QUY TẮC MÃ NĂNG LỰC SỐ (NLS):
+- Mã NLS phải có định dạng: [STT].[STT].TC1[Ký tự] (cho lớp 6-7) hoặc [STT].[STT].TC2[Ký tự] (cho lớp 8-9).
+- Ví dụ lớp 6, 7: 3.1.TC1a, 4.2.TC1b.
+- Ví dụ lớp 8, 9: 5.2.TC2b, 1.3.TC2a.
+
+QUY TẮC HÀNH CHÍNH:
+- KHÔNG điền tên trường, tên giáo viên, tên tổ. Tuyệt đối không tự bịa tên.
+- Sử dụng "...................." cho các thông tin này.`;
 
 export const generateLessonPlan = async (inputs: FormInputs): Promise<GenerationResult> => {
+  // Fix: Strictly obtain API key from process.env.API_KEY as per guidelines
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  const prompt = `Hãy soạn giáo án cực kỳ chi tiết cho bài học sau:
-  Tên bài: ${inputs.ten_bai_day}
-  Khối lớp: ${inputs.khoi_lop}
-  Số tiết: ${inputs.so_tiet}
-  Yêu cầu bổ sung: ${inputs.ghi_chu || "Không có"}
+  const prompt = `Hãy soạn giáo án cực kỳ chi tiết cho bài học môn Toán:
+  - Tên bài: "${inputs.ten_bai_day}"
+  - Khối lớp: ${inputs.khoi_lop}
+  - Số tiết: ${inputs.so_tiet} tiết
+  - Ghi chú: ${inputs.ghi_chu || "Không có"}
   
-  RÀO CẢN KỸ THUẬT (STRICT CONSTRAINT): 
-  Vì đây là bài học dành cho LỚP ${inputs.khoi_lop}, bạn PHẢI sử dụng định dạng mã Năng lực số là "${(inputs.khoi_lop || 0) <= 7 ? "TC1" : "TC2"}" trong toàn bộ giáo án. 
-  Ví dụ mã đúng cho lớp này: ${(inputs.khoi_lop || 0) <= 7 ? "3.1.TC1a" : "5.2.TC2b"}.
-  Trình bày toán học bằng LaTeX chuẩn.`;
+  Yêu cầu: Mã năng lực số phải đúng định dạng X.Y.TC[1/2]z. Trình bày lời giải toán bằng LaTeX chuẩn.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -210,12 +203,18 @@ export const generateLessonPlan = async (inputs: FormInputs): Promise<Generation
       },
     });
 
+    // Fix: Access response.text property directly
     const text = response.text;
-    if (!text) throw new Error("AI không trả về nội dung.");
+    if (!text) throw new Error("Không nhận được phản hồi từ AI. Hãy thử kiểm tra API Key.");
     
-    return JSON.parse(text) as GenerationResult;
+    const result = JSON.parse(text) as GenerationResult;
+    result.form_inputs = inputs; 
+    return result;
   } catch (error: any) {
-    console.error("Gemini SDK Error:", error);
-    throw new Error(error.message || "Lỗi khi kết nối với Gemini 3 Pro.");
+    if (error.message?.includes("entity was not found") || error.message?.includes("API Key")) {
+      throw new Error("LỖI API KEY: Thầy/Cô cần chọn lại API Key (Project trả phí) để sử dụng model Pro.");
+    }
+    console.error("Gemini Error:", error);
+    throw new Error(error.message || "Lỗi khi soạn thảo giáo án.");
   }
 };
