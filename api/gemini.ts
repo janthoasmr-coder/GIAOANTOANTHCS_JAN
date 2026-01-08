@@ -21,16 +21,17 @@ export default async function handler(req: any, res: any) {
       throw new Error("API Key is not configured in environment variables.");
     }
 
+    // Luôn khởi tạo instance mới ngay trước khi sử dụng để đảm bảo lấy cấu hình mới nhất
     const ai = new GoogleGenAI({ apiKey });
     
-    // Gọi Gemini 2.5 Flash với prompt và config được gửi từ frontend
+    // Sử dụng model 'gemini-3-flash-preview' cho các tác vụ văn bản thông thường
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: config
     });
 
-    // Trả về kết quả theo đúng định dạng yêu cầu
+    // Trả về kết quả văn bản bằng cách truy cập thuộc tính .text (không phải phương thức .text())
     return res.status(200).json({ text: response.text });
   } catch (error: any) {
     console.error("Gemini API Error:", error);

@@ -163,58 +163,51 @@ const SCHEMA = {
 
 const SYSTEM_INSTRUCTION = `Bạn là Chatbot chuyên gia soạn "Kế hoạch bài dạy (giáo án)" môn Toán THCS theo Công văn 5512/BGDĐT và tích hợp Năng lực số (CV 3456).
 
-QUY TẮC TOÁN HỌC (CỰC KỲ QUAN TRỌNG):
-- Sử dụng LaTeX chuẩn cho TẤT CẢ công thức.
-- Biểu thức trong dòng (inline) bọc bởi dấu $: ví dụ $x = \frac{-b}{2a}$.
-- Biểu thức khối (block) bọc bởi dấu $$: ví dụ $$\\Delta = b^2 - 4ac$$.
-- TUYỆT ĐỐI không dùng ký tự Unicode cho toán học (ví dụ: dùng $x^2$ thay vì x²; dùng $\sqrt{a}$ thay vì √a).
+QUY TẮC MÃ NĂNG LỰC SỐ (NLS) - BẮT BUỘC:
+- Định dạng mã NLS phải là: [STT].[STT].TC1[ký tự] (cho Lớp 6, 7) HOẶC [STT].[STT].TC2[ký tự] (cho Lớp 8, 9).
+- Ví dụ Lớp 6, 7: 3.1.TC1a, 4.2.TC1b.
+- Ví dụ Lớp 8, 9: 5.2.TC2b, 1.3.TC2a.
+- TUYỆT ĐỐI không sử dụng các mã khác ngoài TC1 cho lớp 6-7 và TC2 cho lớp 8-9.
 
-QUY TẮC MÃ NĂNG LỰC SỐ (NLS):
-- Mã NLS phải có định dạng: [STT].[STT].TC1[Ký tự] (cho lớp 6-7) hoặc [STT].[STT].TC2[Ký tự] (cho lớp 8-9).
-- Ví dụ lớp 6, 7: 3.1.TC1a, 4.2.TC1b.
-- Ví dụ lớp 8, 9: 5.2.TC2b, 1.3.TC2a.
+QUY TẮC TOÁN HỌC:
+- Sử dụng LaTeX chuẩn: inline bọc bởi $, block bọc bởi $$. 
+- Trình bày công thức rõ ràng, chi tiết từng bước giải.
 
 QUY TẮC HÀNH CHÍNH:
-- KHÔNG điền tên trường, tên giáo viên, tên tổ. Tuyệt đối không tự bịa tên.
-- Sử dụng "...................." cho các thông tin này.`;
+- Để trống tên trường, tổ, giáo viên bằng "....................".`;
 
 export const generateLessonPlan = async (inputs: FormInputs): Promise<GenerationResult> => {
-  // Fix: Strictly obtain API key from process.env.API_KEY as per guidelines
+  // Luôn khởi tạo instance mới để lấy API Key mới nhất từ process.env.API_KEY
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  const prompt = `Hãy soạn giáo án cực kỳ chi tiết cho bài học môn Toán:
-  - Tên bài: "${inputs.ten_bai_day}"
-  - Khối lớp: ${inputs.khoi_lop}
-  - Số tiết: ${inputs.so_tiet} tiết
-  - Ghi chú: ${inputs.ghi_chu || "Không có"}
-  
-  Yêu cầu: Mã năng lực số phải đúng định dạng X.Y.TC[1/2]z. Trình bày lời giải toán bằng LaTeX chuẩn.`;
+  const prompt = `Soạn giáo án chi tiết bài "${inputs.ten_bai_day}" lớp ${inputs.khoi_lop}, thời lượng ${inputs.so_tiet} tiết. 
+  Yêu cầu ghi chú: ${inputs.ghi_chu || "Không có"}. 
+  Lưu ý: Mã NLS phải đúng định dạng TC${inputs.khoi_lop! <= 7 ? '1' : '2'} và trình bày LaTeX đẹp.`;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
         responseSchema: SCHEMA,
-        temperature: 0.2,
+        temperature: 0.1,
         thinkingConfig: { thinkingBudget: 32768 }
       },
     });
 
-    // Fix: Access response.text property directly
     const text = response.text;
-    if (!text) throw new Error("Không nhận được phản hồi từ AI. Hãy thử kiểm tra API Key.");
+    if (!text) throw new Error("Không nhận được phản hồi từ AI.");
     
     const result = JSON.parse(text) as GenerationResult;
     result.form_inputs = inputs; 
     return result;
   } catch (error: any) {
-    if (error.message?.includes("entity was not found") || error.message?.includes("API Key")) {
-      throw new Error("LỖI API KEY: Thầy/Cô cần chọn lại API Key (Project trả phí) để sử dụng model Pro.");
-    }
     console.error("Gemini Error:", error);
+    if (error.message?.includes("API key") || error.message?.includes("Requested entity was not found")) {
+      throw new Error("LỖI XÁC THỰC: Thầy/Cô vui lòng nhấn nút 'Thiết lập lại Key' để chọn API Key trả phí.");
+    }
     throw new Error(error.message || "Lỗi khi soạn thảo giáo án.");
   }
 };

@@ -5,65 +5,55 @@ import { GenerationResult, ProcedureActivity, KnowledgeItem, ExampleExercise } f
 declare const katex: any;
 
 /**
- * Component hỗ trợ render text xen kẽ với LaTeX
- * Cải thiện regex và logic tokenization để không bỏ sót các khối đa dòng
+ * MathText: Render văn bản xen kẽ công thức toán học.
+ * Hỗ trợ: $...$, $$...$$, \(...\), \[...\]
  */
 const MathText: React.FC<{ text: string }> = ({ text }) => {
   if (!text) return null;
 
-  // Tách văn bản thành các mảng chứa text thường và math
-  // Regex cải tiến để bắt chính xác các cụm $$...$$ và $...$ ngay cả khi có xuống hàng
-  const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
+  // Split text into parts based on LaTeX delimiters
+  const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g);
 
   return (
     <span className="leading-relaxed">
       {parts.map((part, index) => {
         if (!part) return null;
 
-        // Xử lý Block Math $$...$$
+        let formula = '';
+        let displayMode = false;
+
         if (part.startsWith('$$') && part.endsWith('$$')) {
-          const formula = part.slice(2, -2).trim();
-          try {
-            const html = katex.renderToString(formula, { 
-              displayMode: true, 
-              throwOnError: false,
-              trust: true
-            });
-            return (
-              <div 
-                key={index} 
-                className="my-6 overflow-x-auto overflow-y-hidden py-3 bg-slate-50/50 rounded-lg"
-                dangerouslySetInnerHTML={{ __html: html }} 
-              />
-            );
-          } catch (e) {
-            return <code key={index} className="text-red-600 bg-red-50 p-1 rounded font-mono text-xs">{part}</code>;
-          }
+          formula = part.slice(2, -2);
+          displayMode = true;
+        } else if (part.startsWith('$') && part.endsWith('$')) {
+          formula = part.slice(1, -1);
+          displayMode = false;
+        } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
+          formula = part.slice(2, -2);
+          displayMode = true;
+        } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
+          formula = part.slice(2, -2);
+          displayMode = false;
+        } else {
+          return <span key={index} className="whitespace-pre-wrap">{part}</span>;
         }
 
-        // Xử lý Inline Math $...$
-        if (part.startsWith('$') && part.endsWith('$')) {
-          const formula = part.slice(1, -1).trim();
-          try {
-            const html = katex.renderToString(formula, { 
-              displayMode: false, 
-              throwOnError: false,
-              trust: true
-            });
-            return (
-              <span 
-                key={index} 
-                className="inline-block px-1 align-middle"
-                dangerouslySetInnerHTML={{ __html: html }} 
-              />
-            );
-          } catch (e) {
-            return <code key={index} className="text-red-600 bg-red-50 p-1 rounded font-mono text-xs">{part}</code>;
-          }
+        try {
+          const html = katex.renderToString(formula.trim(), { 
+            displayMode, 
+            throwOnError: false,
+            trust: true 
+          });
+          return (
+            <span 
+              key={index} 
+              className={displayMode ? "block my-4 overflow-x-auto py-2" : "inline-block px-0.5 align-middle"}
+              dangerouslySetInnerHTML={{ __html: html }} 
+            />
+          );
+        } catch (e) {
+          return <code key={index} className="bg-red-50 text-red-600 px-1">{part}</code>;
         }
-
-        // Văn bản thường
-        return <span key={index} className="whitespace-pre-wrap">{part}</span>;
       })}
     </span>
   );
@@ -72,7 +62,11 @@ const MathText: React.FC<{ text: string }> = ({ text }) => {
 const ProductRenderer: React.FC<{ product: ProcedureActivity['to_chuc_thuc_hien_2_cot']['san_pham_du_kien'] }> = ({ product }) => {
   return (
     <div className="space-y-4 text-black">
-      {product.tom_tat && <div className="font-bold underline italic text-blue-900 border-b border-blue-100 pb-1 mb-2"><MathText text={product.tom_tat} /></div>}
+      {product.tom_tat && (
+        <div className="font-bold underline italic text-blue-900 border-b border-blue-100 pb-1 mb-2">
+          <MathText text={product.tom_tat} />
+        </div>
+      )}
       
       {product.kien_thuc_moi?.length > 0 && (
         <div className="space-y-2">
@@ -147,7 +141,6 @@ const LessonPlanViewer: React.FC<{ data: GenerationResult }> = ({ data }) => {
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 font-sans no-print-bg">
-      {/* Floating Toolbar */}
       <div className="sticky top-20 z-40 bg-white/95 backdrop-blur-md p-4 mb-8 rounded-2xl shadow-2xl border border-blue-200 flex flex-wrap justify-between items-center gap-4 no-print">
         <div className="flex flex-col">
           <h2 className="text-xl font-black text-blue-900 uppercase">Kế hoạch bài dạy</h2>
@@ -163,9 +156,7 @@ const LessonPlanViewer: React.FC<{ data: GenerationResult }> = ({ data }) => {
         </div>
       </div>
 
-      {/* Document Area */}
       <div ref={docRef} className="bg-white p-[20mm] shadow-2xl lesson-document mx-auto print:p-0 print:shadow-none min-h-[297mm] text-black border border-gray-100">
-        {/* Empty Administrative Header */}
         <div className="grid grid-cols-2 mb-10 text-[13pt] leading-snug">
           <div className="text-left">
             <p className="font-bold">Trường: ............................................</p>
@@ -178,7 +169,6 @@ const LessonPlanViewer: React.FC<{ data: GenerationResult }> = ({ data }) => {
           </div>
         </div>
 
-        {/* Title Section */}
         <div className="text-center mb-10">
           <h1 className="text-[16pt] font-bold uppercase mb-2">KẾ HOẠCH BÀI DẠY</h1>
           <p className="text-[14pt] font-bold uppercase">TÊN BÀI DẠY: {lesson_plan.thong_tin_chung.tieu_de_bai}</p>
@@ -188,7 +178,6 @@ const LessonPlanViewer: React.FC<{ data: GenerationResult }> = ({ data }) => {
           <p className="text-[13pt] mt-1 italic">Thời gian thực hiện: ({form_inputs?.so_tiet || '...'} tiết)</p>
         </div>
 
-        {/* I. Objectives */}
         <div className="mb-8">
           <h2 className="text-[14pt] font-bold uppercase border-b border-black pb-1 mb-3">I. MỤC TIÊU:</h2>
           <div className="ml-4 space-y-4 text-[13pt]">
@@ -224,7 +213,6 @@ const LessonPlanViewer: React.FC<{ data: GenerationResult }> = ({ data }) => {
           </div>
         </div>
 
-        {/* II. Equipment */}
         <div className="mb-8">
           <h2 className="text-[14pt] font-bold uppercase border-b border-black pb-1 mb-3">II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU:</h2>
           <div className="ml-4 text-[13pt]">
@@ -233,7 +221,6 @@ const LessonPlanViewer: React.FC<{ data: GenerationResult }> = ({ data }) => {
           </div>
         </div>
 
-        {/* III. Procedure */}
         <div className="mb-8">
           <h2 className="text-[14pt] font-bold uppercase border-b border-black pb-1 mb-3">III. TIẾN TRÌNH DẠY HỌC:</h2>
           
@@ -290,7 +277,6 @@ const LessonPlanViewer: React.FC<{ data: GenerationResult }> = ({ data }) => {
           ))}
         </div>
 
-        {/* IV. Digital Map */}
         <div className="mt-14 pt-8 border-t-2 border-black" style={{ pageBreakInside: 'avoid' }}>
           <h2 className="text-[14pt] font-bold uppercase mb-6 text-center">IV. BẢNG ÁNH XẠ NĂNG LỰC SỐ (CV 3456):</h2>
           <table className="w-full border border-black border-collapse text-[11pt]">
@@ -318,7 +304,6 @@ const LessonPlanViewer: React.FC<{ data: GenerationResult }> = ({ data }) => {
           </table>
         </div>
 
-        {/* V. Homework */}
         <div className="mt-12" style={{ pageBreakInside: 'avoid' }}>
           <h2 className="text-[14pt] font-bold uppercase border-b border-black pb-1 mb-3">V. HƯỚNG DẪN VỀ NHÀ:</h2>
           <ul className="list-disc ml-8 text-[13pt] space-y-2">
@@ -326,7 +311,6 @@ const LessonPlanViewer: React.FC<{ data: GenerationResult }> = ({ data }) => {
           </ul>
         </div>
 
-        {/* Signature */}
         <div className="mt-24 grid grid-cols-2 text-center text-[13pt]" style={{ pageBreakInside: 'avoid' }}>
           <div>
             <p className="font-bold uppercase mb-2">Duyệt của tổ chuyên môn</p>

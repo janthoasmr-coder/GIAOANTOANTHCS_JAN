@@ -5,12 +5,7 @@ import LessonPlanViewer from './components/LessonPlanViewer';
 import { FormInputs, GenerationResult } from './types';
 import { generateLessonPlan } from './geminiService';
 
-// Fix: Use the globally available AIStudio type and readonly modifier to avoid declaration conflicts
-declare global {
-  interface Window {
-    readonly aistudio: AIStudio;
-  }
-}
+// Removed manual declaration of window.aistudio to avoid conflict with existing global definitions.
 
 const App: React.FC = () => {
   const [phase, setPhase] = useState<'SETUP' | 'A' | 'B'>('SETUP');
@@ -24,22 +19,22 @@ const App: React.FC = () => {
 
   const checkApiKey = async () => {
     try {
-      const hasKey = await window.aistudio.hasSelectedApiKey();
-      if (hasKey) {
+      if (window.aistudio && await window.aistudio.hasSelectedApiKey()) {
         setPhase('A');
       } else {
         setPhase('SETUP');
       }
     } catch (e) {
-      // Nếu API không tồn tại, có thể đang ở môi trường dev khác, mặc định cho qua
+      // Môi trường không có key picker
       setPhase('A');
     }
   };
 
   const handleOpenKeyDialog = async () => {
-    await window.aistudio.openSelectKey();
-    // Sau khi trigger dialog, giả định thành công và chuyển sang màn hình chính
-    setPhase('A');
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      setPhase('A');
+    }
   };
 
   const handleStartGeneration = async (inputs: FormInputs) => {
@@ -53,7 +48,7 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error("Generation Error:", err);
       setError(err.message);
-      if (err.message?.includes("API KEY")) {
+      if (err.message?.includes("XÁC THỰC")) {
         setPhase('SETUP');
       }
     } finally {
@@ -63,17 +58,16 @@ const App: React.FC = () => {
 
   if (phase === 'SETUP') {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border-t-8 border-blue-600">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-sans">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border-t-8 border-blue-600 text-slate-900">
           <div className="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-black text-slate-900 mb-4 uppercase">Cấu hình API Key</h2>
+          <h2 className="text-2xl font-black mb-4 uppercase">Yêu cầu API Key</h2>
           <p className="text-slate-600 mb-8 leading-relaxed font-medium">
-            Model <strong>Gemini 3 Pro</strong> yêu cầu sử dụng API Key từ dự án Google Cloud có kích hoạt thanh toán (Paid Project). 
-            Thầy/Cô vui lòng nhấn nút bên dưới để chọn Key.
+            Để sử dụng model <strong>Gemini 3 Pro</strong> soạn giáo án chuyên sâu, Thầy/Cô vui lòng chọn một API Key từ dự án có trả phí.
           </p>
           <button 
             onClick={handleOpenKeyDialog}
@@ -82,7 +76,7 @@ const App: React.FC = () => {
             MỞ TRÌNH CHỌN API KEY
           </button>
           <p className="mt-4 text-[10px] text-slate-400">
-            Xem hướng dẫn tại: <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="underline font-bold text-blue-500">ai.google.dev/gemini-api/docs/billing</a>
+            Link hướng dẫn: <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="underline font-bold text-blue-500">Billing Documentation</a>
           </p>
         </div>
       </div>
@@ -90,7 +84,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
       <nav className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white shadow-2xl sticky top-0 z-50 no-print border-b border-blue-400/20">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
@@ -101,17 +95,11 @@ const App: React.FC = () => {
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tight leading-none">MathPlan AI</h1>
-              <p className="text-[9px] text-blue-200 uppercase font-bold tracking-widest mt-1 opacity-80">Giáo Án Chuẩn 5512 & 3456</p>
+              <p className="text-[9px] text-blue-200 uppercase font-bold tracking-widest mt-1 opacity-80">Soạn giáo án 5512 & 3456</p>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
-            <button 
-               onClick={() => setPhase('SETUP')}
-               className="text-[10px] font-bold bg-blue-800/50 hover:bg-blue-800 px-3 py-1.5 rounded-lg border border-blue-700 transition-all"
-            >
-              ⚙ Đổi Key
-            </button>
+             <button onClick={() => setPhase('SETUP')} className="text-[10px] bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-colors">Thiết lập lại Key</button>
             {phase === 'B' && (
               <button 
                 onClick={() => setPhase('A')}
@@ -140,9 +128,9 @@ const App: React.FC = () => {
         {phase === 'A' ? (
           <div className="animate-fade-in">
             <div className="text-center mb-10">
-              <h2 className="text-3xl font-black text-slate-900 mb-3 tracking-tight">Soạn giáo án với Gemini 3 Pro</h2>
+              <h2 className="text-3xl font-black text-slate-900 mb-3 tracking-tight">Hệ thống Soạn Giáo Án Thông Minh</h2>
               <p className="text-slate-600 max-w-2xl mx-auto font-medium leading-relaxed">
-                Hệ thống AI chuyên gia giúp Thầy/Cô thiết kế bài dạy Toán học chất lượng cao, tích hợp năng lực số và LaTeX chuẩn mực.
+                Ứng dụng AI chuyên biệt cho giáo viên Toán THCS, tự động tích hợp Năng lực số và định dạng LaTeX chuẩn mực.
               </p>
             </div>
             <InputForm onSubmit={handleStartGeneration} isLoading={isLoading} />
@@ -154,7 +142,7 @@ const App: React.FC = () => {
 
       <footer className="bg-white py-8 border-t border-slate-200 mt-auto no-print">
         <div className="container mx-auto px-6 text-center">
-          <p className="font-black text-slate-400 text-[10px] uppercase tracking-widest">MathPlan AI v3.5 Pro • Đã khắc phục lỗi hiển thị & API Key</p>
+          <p className="font-black text-slate-400 text-[10px] uppercase tracking-widest">MathPlan AI • Powered by Gemini 3 Pro</p>
         </div>
       </footer>
 
