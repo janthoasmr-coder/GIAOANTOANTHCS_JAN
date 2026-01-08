@@ -5,23 +5,12 @@ import { FormInputs, GenerationResult } from "./types";
 const SCHEMA = {
   type: Type.OBJECT,
   required: [
-    "form_inputs",
     "lesson_plan",
     "digital_competency_map",
     "quality_checklist",
     "giao_an_markdown"
   ],
   properties: {
-    form_inputs: {
-      type: Type.OBJECT,
-      required: ["ten_bai_day", "khoi_lop", "so_tiet", "ghi_chu"],
-      properties: {
-        ten_bai_day: { type: Type.STRING },
-        khoi_lop: { type: Type.INTEGER },
-        so_tiet: { type: Type.INTEGER },
-        ghi_chu: { type: Type.STRING }
-      }
-    },
     lesson_plan: {
       type: Type.OBJECT,
       required: ["thong_tin_chung", "muc_tieu", "thiet_bi", "tien_trinh", "huong_dan_ve_nha"],
@@ -144,7 +133,6 @@ const SCHEMA = {
           hoat_dong: { type: Type.STRING },
           ma_nls: { type: Type.ARRAY, items: { type: Type.STRING } },
           bieu_hien: { type: Type.ARRAY, items: { type: Type.STRING } },
-          cong_cu_so: { type: Type.ARRAY, items: { type: Type.STRING }, nullable: true },
           minh_chung: { type: Type.ARRAY, items: { type: Type.STRING } }
         }
       }
@@ -153,7 +141,7 @@ const SCHEMA = {
       type: Type.OBJECT,
       properties: {
         dung_bo_cuc_mau: { type: Type.BOOLEAN },
-        co_danh_gia_thuong_xuyen: { type: Type.BOOLEAN },
+        co_danh_gia_thu_xuyen: { type: Type.BOOLEAN },
         co_dia_chi_nls: { type: Type.BOOLEAN }
       }
     },
@@ -177,33 +165,36 @@ QUY TẮC HÀNH CHÍNH:
 - Để trống tên trường, tổ, giáo viên bằng "....................".`;
 
 export const generateLessonPlan = async (inputs: FormInputs): Promise<GenerationResult> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  const prompt = `Soạn giáo án chi tiết bài "${inputs.ten_bai_day}" lớp ${inputs.khoi_lop}, thời lượng ${inputs.so_tiet} tiết. 
-  Yêu cầu ghi chú: ${inputs.ghi_chu || "Không có"}. 
-  Lưu ý: Mã NLS phải đúng định dạng TC${inputs.khoi_lop! <= 7 ? '1' : '2'} và trình bày LaTeX đẹp.`;
-
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    const prompt = `Soạn giáo án chi tiết bài "${inputs.ten_bai_day}" lớp ${inputs.khoi_lop}, thời lượng ${inputs.so_tiet} tiết. 
+    Yêu cầu ghi chú: ${inputs.ghi_chu || "Không có"}. 
+    Lưu ý: Mã NLS phải đúng định dạng TC${inputs.khoi_lop && inputs.khoi_lop <= 7 ? '1' : '2'} và trình bày LaTeX đẹp.`;
+
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
         responseSchema: SCHEMA,
-        temperature: 0.1,
-        thinkingConfig: { thinkingBudget: 32768 }
-      },
+        temperature: 0.1
+      }
     });
 
-    const text = response.text;
-    if (!text) throw new Error("Không nhận được phản hồi từ AI.");
+    if (!response.text) {
+      throw new Error("Không nhận được kết quả từ AI.");
+    }
+
+    const result = JSON.parse(response.text);
     
-    const result = JSON.parse(text) as GenerationResult;
-    result.form_inputs = inputs; 
-    return result;
+    return {
+      ...result,
+      form_inputs: inputs
+    } as GenerationResult;
   } catch (error: any) {
-    console.error("Gemini Error:", error);
-    throw new Error(error.message || "Lỗi khi soạn thảo giáo án. Vui lòng kiểm tra lại kết nối hoặc nội dung đầu vào.");
+    console.error("Gemini Service Error:", error);
+    throw new Error(error.message || "Không thể kết nối với dịch vụ AI. Vui lòng kiểm tra internet.");
   }
 };
