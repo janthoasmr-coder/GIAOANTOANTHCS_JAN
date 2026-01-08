@@ -1,41 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import InputForm from './components/InputForm';
 import LessonPlanViewer from './components/LessonPlanViewer';
 import { FormInputs, GenerationResult } from './types';
 import { generateLessonPlan } from './geminiService';
 
-// Removed manual declaration of window.aistudio to avoid conflict with existing global definitions.
-
 const App: React.FC = () => {
-  const [phase, setPhase] = useState<'SETUP' | 'A' | 'B'>('SETUP');
+  const [phase, setPhase] = useState<'A' | 'B'>('A');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    checkApiKey();
-  }, []);
-
-  const checkApiKey = async () => {
-    try {
-      if (window.aistudio && await window.aistudio.hasSelectedApiKey()) {
-        setPhase('A');
-      } else {
-        setPhase('SETUP');
-      }
-    } catch (e) {
-      // Môi trường không có key picker
-      setPhase('A');
-    }
-  };
-
-  const handleOpenKeyDialog = async () => {
-    if (window.aistudio) {
-      await window.aistudio.openSelectKey();
-      setPhase('A');
-    }
-  };
 
   const handleStartGeneration = async (inputs: FormInputs) => {
     setIsLoading(true);
@@ -48,40 +22,10 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error("Generation Error:", err);
       setError(err.message);
-      if (err.message?.includes("XÁC THỰC")) {
-        setPhase('SETUP');
-      }
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (phase === 'SETUP') {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-sans">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border-t-8 border-blue-600 text-slate-900">
-          <div className="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-black mb-4 uppercase">Yêu cầu API Key</h2>
-          <p className="text-slate-600 mb-8 leading-relaxed font-medium">
-            Để sử dụng model <strong>Gemini 3 Pro</strong> soạn giáo án chuyên sâu, Thầy/Cô vui lòng chọn một API Key từ dự án có trả phí.
-          </p>
-          <button 
-            onClick={handleOpenKeyDialog}
-            className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl hover:bg-blue-700 transition-all active:scale-95"
-          >
-            MỞ TRÌNH CHỌN API KEY
-          </button>
-          <p className="mt-4 text-[10px] text-slate-400">
-            Link hướng dẫn: <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="underline font-bold text-blue-500">Billing Documentation</a>
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
@@ -99,7 +43,6 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-             <button onClick={() => setPhase('SETUP')} className="text-[10px] bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition-colors">Thiết lập lại Key</button>
             {phase === 'B' && (
               <button 
                 onClick={() => setPhase('A')}

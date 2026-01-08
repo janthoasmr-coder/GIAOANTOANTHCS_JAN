@@ -177,7 +177,6 @@ QUY TẮC HÀNH CHÍNH:
 - Để trống tên trường, tổ, giáo viên bằng "....................".`;
 
 export const generateLessonPlan = async (inputs: FormInputs): Promise<GenerationResult> => {
-  // Luôn khởi tạo instance mới để lấy API Key mới nhất từ process.env.API_KEY
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const prompt = `Soạn giáo án chi tiết bài "${inputs.ten_bai_day}" lớp ${inputs.khoi_lop}, thời lượng ${inputs.so_tiet} tiết. 
@@ -205,9 +204,6 @@ export const generateLessonPlan = async (inputs: FormInputs): Promise<Generation
     return result;
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    if (error.message?.includes("API key") || error.message?.includes("Requested entity was not found")) {
-      throw new Error("LỖI XÁC THỰC: Thầy/Cô vui lòng nhấn nút 'Thiết lập lại Key' để chọn API Key trả phí.");
-    }
-    throw new Error(error.message || "Lỗi khi soạn thảo giáo án.");
+    throw new Error(error.message || "Lỗi khi soạn thảo giáo án. Vui lòng kiểm tra lại kết nối hoặc nội dung đầu vào.");
   }
 };
