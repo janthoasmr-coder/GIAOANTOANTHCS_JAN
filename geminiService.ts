@@ -173,7 +173,7 @@ export const generateLessonPlan = async (inputs: FormInputs): Promise<Generation
     Lưu ý: Mã NLS phải đúng định dạng TC${inputs.khoi_lop && inputs.khoi_lop <= 7 ? '1' : '2'} và trình bày LaTeX đẹp.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3-pro-preview",
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -195,6 +195,6 @@ export const generateLessonPlan = async (inputs: FormInputs): Promise<Generation
     } as GenerationResult;
   } catch (error: any) {
     console.error("Gemini Service Error:", error);
-    throw new Error(error.message || "Không thể kết nối với dịch vụ AI. Vui lòng kiểm tra internet.");
+    throw new Error(error.message || "Không thể kết nối với dịch vụ AI. Vui lòng thử lại sau.");
   }
 };

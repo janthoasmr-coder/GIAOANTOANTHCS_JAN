@@ -21,7 +21,7 @@ const App: React.FC = () => {
       window.scrollTo(0, 0);
     } catch (err: any) {
       console.error("Generation Error:", err);
-      setError(err.message);
+      setError(err.message || "Đã xảy ra lỗi không xác định khi soạn giáo án.");
     } finally {
       setIsLoading(false);
     }
@@ -46,7 +46,7 @@ const App: React.FC = () => {
             {phase === 'B' && (
               <button 
                 onClick={() => setPhase('A')}
-                className="text-xs font-bold bg-white text-blue-900 px-4 py-2 rounded-xl border border-white/20 transition-all active:scale-95"
+                className="text-xs font-bold bg-white text-blue-900 px-4 py-2 rounded-xl border border-white/20 transition-all active:scale-95 hover:bg-blue-50"
               >
                 Soạn Bài Mới
               </button>
@@ -73,7 +73,7 @@ const App: React.FC = () => {
             <div className="text-center mb-10">
               <h2 className="text-3xl font-black text-slate-900 mb-3 tracking-tight">Hệ thống Soạn Giáo Án Thông Minh</h2>
               <p className="text-slate-600 max-w-2xl mx-auto font-medium leading-relaxed">
-                Ứng dụng AI chuyên biệt cho giáo viên Toán THCS, tự động tích hợp Năng lực số và định dạng LaTeX chuẩn mực.
+                Ứng dụng AI chuyên biệt cho giáo viên Toán THCS, tự động tích hợp Năng lực số và định dạng LaTeX chuẩn mực theo CV 5512 & 3456.
               </p>
             </div>
             <InputForm onSubmit={handleStartGeneration} isLoading={isLoading} />
@@ -85,7 +85,7 @@ const App: React.FC = () => {
 
       <footer className="bg-white py-8 border-t border-slate-200 mt-auto no-print">
         <div className="container mx-auto px-6 text-center">
-          <p className="font-black text-slate-400 text-[10px] uppercase tracking-widest">MathPlan AI • Powered by Gemini 3 Pro</p>
+          <p className="font-black text-slate-400 text-[10px] uppercase tracking-widest">MathPlan AI • Tự động hóa bởi Gemini Pro</p>
         </div>
       </footer>
 
